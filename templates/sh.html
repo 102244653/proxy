@@ -1,0 +1,2617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>山海数藏交易实时查询</title>
+  <style>
+    :root {
+      --primary-color: #00a8ff;
+      --secondary-color: #0097e6;
+      --dark-color: #1e272e;
+      --light-color: #f5f6fa;
+      --accent-color: #00d2d3;
+      --success-color: #4cd137;
+      --danger-color: #e84118;
+    }
+    
+    body {
+      font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1e272e 0%, #485460 100%);
+      color: var(--light-color);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('https://img0.baidu.com/it/u=4173055281,3318406456&fm=253&fmt=auto&app=120&f=JPEG') no-repeat center center;
+      background-size: cover;
+      opacity: 0.5;
+      z-index: -1;
+    }
+    
+    .header {
+      background: rgba(30, 39, 46, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 20px 0;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .header-content {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0 0 20px 0;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+    
+    /* 默认PC样式 */
+    /* 隐藏展开/折叠搜索按钮 */
+    .toggle-search-btn {
+      display: none !important;
+    }
+    
+    /* PC上隐藏core-controls容器，直接使用header-controls布局 */
+    .core-controls {
+      display: none !important;
+    }
+    
+    /* PC上刷新按钮位置调整 - 显示在筛选组件左边 */
+    @media (min-width: 769px) {
+      .header-controls {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 15px !important;
+      }
+      
+      .header-controls > .btn-primary {
+        order: 1;
+      }
+      
+      /* PC上平台下拉框放到刷新按钮右边 */
+      #platformSelect {
+        order: 2;
+        display: inline-block !important;
+      }
+      
+      .rare-numbers {
+        order: 0;
+        width: 100%;
+      }
+      
+      .filter-container {
+        order: 3;
+      }
+    }
+    
+    /* 手机响应式样式 */
+    @media (max-width: 768px) {
+      .page-title {
+        font-size: 20px; /* 手机上标题字体变小 */
+      }
+      
+      /* 显示展开/折叠搜索按钮 */
+      .toggle-search-btn {
+        display: inline-flex !important;
+      }
+      
+      /* 默认隐藏搜索组件，但平台按钮常驻 */
+      .rare-numbers,
+      .filter-container {
+        display: none !important;
+      }
+      
+      /* 平台按钮常驻显示 */
+      #platformSelect {
+        display: inline-block !important;
+        width: auto;
+        min-width: 100px;
+      }
+      
+      /* 手机上header-controls布局优化 */
+      .header-controls {
+        gap: 8px;
+        margin-top: 10px;
+        flex-direction: column;
+      }
+      
+      /* 刷新、平台、展开搜索三个按钮放到一行并列显示 */
+      .header-controls > .btn-primary,
+      #platformSelect,
+      .core-controls {
+        display: inline-flex !important;
+        flex: 1;
+      }
+      
+      /* 调整三个按钮的布局 */
+      .header-controls {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+      }
+      
+      /* 刷新数据按钮样式 */
+      .header-controls > .btn-primary {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      
+      /* 平台下拉框样式调整 */
+      #platformSelect {
+        padding: 8px 10px;
+        font-size: 12px;
+        margin: 0;
+      }
+      
+      /* 核心控制按钮容器样式 */
+      .core-controls {
+        padding: 0;
+        gap: 8px;
+      }
+      
+      /* 展开搜索组件按钮样式 */
+      .core-controls > .toggle-search-btn {
+        padding: 8px 10px;
+        font-size: 12px;
+        background: transparent;
+        color: var(--accent-color);
+        border: 1px solid rgba(0, 210, 211, 0.4);
+        margin: 0;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+      }
+      
+      /* 展开搜索按钮悬停效果 */
+      .core-controls > .toggle-search-btn:hover {
+        background: rgba(0, 210, 211, 0.1);
+        border-color: var(--accent-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 210, 211, 0.2);
+      }
+      
+      /* 展开状态样式 - 显示所有搜索组件 */
+      .header-controls.expanded {
+        gap: 12px;
+      }
+      
+      /* 展开后刷新、平台、收起三个按钮仍然保持一行并列显示 */
+      .header-controls.expanded > .btn-primary,
+      .header-controls.expanded > #platformSelect,
+      .header-controls.expanded > .core-controls {
+        display: inline-flex !important;
+        flex: 1;
+      }
+      
+      /* 展开后控制按钮容器的布局 */
+      .header-controls.expanded {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+      }
+      
+      /* 展开后搜索组件的布局 */
+      .header-controls.expanded > .rare-numbers,
+      .header-controls.expanded > .filter-container {
+        width: 100% !important;
+        order: 3;
+      }
+      
+      /* 展开时显示所有搜索组件 */
+      .header-controls.expanded .filter-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+      }
+      
+      /* 展开时显示自定义稀有款输入框 */
+      .header-controls.expanded .rare-numbers {
+        display: block !important;
+        width: 100% !important;
+      }
+      
+      /* 手机上稀有款输入框样式优化 */
+      .rare-keywords-input {
+        width: calc(100% - 30px) !important;
+        max-width: 100% !important;
+        padding: 8px 12px !important;
+        font-size: 12px !important;
+      }
+      
+      /* 展开搜索框后组件宽度自适应对齐显示 */
+      .header-controls.expanded .filter-container > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 5px 0 !important;
+      }
+      
+      /* 确保所有输入框在手机上不超出屏幕 */
+      @media (max-width: 768px) {
+        /* 设置box-sizing，确保padding和border不增加元素总宽度 */
+        .filter-input {
+          box-sizing: border-box !important;
+        }
+        
+        /* 确保所有筛选输入框宽度正确，不超出屏幕 */
+        .header-controls.expanded .filter-input {
+          width: calc(100% - 20px) !important;
+          max-width: calc(100% - 20px) !important;
+          min-width: auto !important;
+          margin: 5px 10px !important;
+        }
+        
+        /* 确保价格筛选容器和输入框不超出屏幕 */
+        .header-controls.expanded .price-filter-container {
+          width: calc(100% - 20px) !important;
+          margin: 5px 10px !important;
+        }
+        
+        .header-controls.expanded .price-input {
+          width: calc(50% - 8px) !important;
+          margin: 0 !important;
+        }
+        
+        /* 确保筛选容器不超出屏幕 */
+        .header-controls.expanded .filter-container {
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+      }
+      
+      /* 优化筛选容器内组件的布局 */
+      .header-controls.expanded .filter-container {
+        gap: 8px !important;
+      }
+      
+      /* 价格筛选容器自适应宽度 */
+      .header-controls.expanded .price-filter-container {
+        flex-direction: row !important;
+        gap: 8px !important;
+        justify-content: space-between !important;
+      }
+      
+      /* 价格输入框自适应宽度 */
+      .header-controls.expanded .price-input {
+        flex: 1 !important;
+        width: calc(50% - 12px) !important;
+      }
+      
+      /* 确保按钮宽度自适应 */
+      .header-controls.expanded .btn {
+        width: 100% !important;
+        margin: 5px 0 !important;
+      }
+      
+      /* 手机上稀有款容器内边距优化 */
+      .rare-numbers details {
+        padding: 8px !important;
+      }
+      
+      /* 编号内容过多时最多显示两行，超出用省略号 */
+      .card-content .card-type,
+      .card-content .goods-info,
+      .sales-content .sales-id {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.5;
+      }
+      
+      /* 手机上卡片样式优化，更紧凑 */
+      .image-card {
+        padding: 10px !important;
+        height: auto !important;
+        min-height: 280px !important;
+      }
+      
+      .image-card img {
+        height: 160px !important;
+      }
+      
+      .card-content {
+        padding: 2px 0 0 0;
+        justify-content: space-between !important;
+      }
+      
+      .card-type {
+        font-size: 12px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+      }
+      
+      .price {
+        font-size: 14px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+      }
+      
+      .goods-info {
+        font-size: 11px !important;
+        margin: 0 !important;
+        line-height: 1.3 !important;
+        height: calc(1.3em * 2) !important;
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      
+      .link {
+        margin-top: 5px !important;
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+        line-height: 1.1 !important;
+      }
+    }
+    
+    .rare-numbers {
+      margin: 15px 0;
+    }
+    
+    .rare-numbers details {
+      background: rgba(0, 168, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid rgba(0, 168, 255, 0.3);
+    }
+    
+    .rare-numbers summary {
+      cursor: pointer;
+      padding: 10px 15px;
+      background: rgba(0, 168, 255, 0.2);
+      border-radius: 6px;
+      font-weight: 600;
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      color: var(--primary-color);
+      transition: all 0.3s ease;
+    }
+    
+    .rare-numbers summary:hover {
+      background: rgba(0, 168, 255, 0.3);
+    }
+    
+    .rare-numbers summary::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 8px;
+      transition: transform 0.2s;
+      font-size: 12px;
+    }
+    
+    .rare-numbers details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    
+    .rare-keywords-input {
+      width: 100%;
+      max-width: 500px;
+      padding: 12px 15px;
+      border: 1px solid rgba(0, 168, 255, 0.5);
+      border-radius: 8px;
+      font-size: 14px;
+      margin: 10px auto;
+      display: block;
+      background: rgba(30, 39, 46, 0.7);
+      color: var(--light-color);
+      transition: all 0.3s ease;
+    }
+    
+    .rare-keywords-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(0, 168, 255, 0.2);
+    }
+    
+    .rare-keywords-hint {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-align: center;
+      margin-top: 5px;
+    }
+    
+    .header-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    
+    .btn-primary {
+      background: transparent;
+      color: var(--accent-color);
+      border: 1px solid rgba(0, 210, 211, 0.4);
+    }
+    
+    .btn-primary:hover {
+      background: rgba(0, 210, 211, 0.1);
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 210, 211, 0.2);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-danger {
+      background: var(--danger-color);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c23616;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(232, 65, 24, 0.3);
+    }
+    
+    .btn-success {
+      background: var(--success-color);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #44bd32;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 209, 55, 0.3);
+    }
+    
+    .filter-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+    
+    .filter-input {
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      border: 1px solid rgba(0, 210, 211, 0.4);
+      background: transparent;
+      color: var(--accent-color) !important;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+      font-weight: 600;
+    }
+    
+    .filter-input:hover {
+      background: rgba(0, 210, 211, 0.1);
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 210, 211, 0.2);
+    }
+    
+    .filter-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(0, 210, 211, 0.2);
+    }
+    
+    /* 确保select元素的字体颜色与刷新按钮一致 */
+    select.filter-input {
+      color: var(--accent-color) !important;
+      appearance: none !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d2d3' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 10px center !important;
+      background-size: 12px 12px !important;
+      padding-right: 30px !important;
+      background-color: transparent !important;
+    }
+    
+    /* 确保在所有状态下下拉箭头都显示 */
+    select.filter-input:focus,
+    select.filter-input:active,
+    select.filter-input:valid {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d2d3' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 10px center !important;
+    }
+    
+    select.filter-input::-ms-expand {
+      display: none;
+    }
+    
+    /* 确保下拉选项的字体颜色与刷新按钮一致 */
+    select.filter-input option {
+      color: var(--accent-color) !important;
+      background: rgba(30, 39, 46, 0.9);
+    }
+    
+    /* 确保下拉选项在选中时的背景色 */
+    select.filter-input option:checked {
+      background-color: rgba(0, 210, 211, 0.3) !important;
+    }
+    
+    .archive-select {
+      min-width: 150px;
+      max-width: 180px;
+    }
+    
+    .price-input {
+      width: 100px;
+    }
+    
+    #platformSelect {
+      min-width: 120px;
+      max-width: 140px;
+    }
+    
+    #goodsNoFilter {
+      min-width: 200px;
+      max-width: 300px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    
+    .price-filter-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .summary {
+      text-align: center;
+      margin: 15px 0;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      background: rgba(30, 39, 46, 0.5);
+      border-radius: 8px;
+      max-width: 1800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+	   white-space: pre-line; /* 保留换行符 */
+	  color: white;
+    }
+    
+    /* 修正分界线容器样式 */
+    .divider-container {
+      width: 100%;
+      max-width: 2200px;
+      margin: 30px auto;
+    }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin: 20px 0;
+    }
+    
+    .divider-line {
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    }
+    
+    .divider-text {
+      padding: 0 20px;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      white-space: nowrap;
+    }
+
+    
+    /* 优化网格容器布局 - 减少空白，每行显示6个卡片 */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      max-width: 2200px;
+      margin: 0 auto;
+    }
+    
+    /* 大屏幕时固定每行8个卡片 */
+    @media (min-width: 1800px) {
+      .grid-container {
+        grid-template-columns: repeat(8, 1fr);
+      }
+    }
+    
+    /* 中等屏幕时每行4个卡片 */
+    @media (min-width: 1000px) and (max-width: 1700px) {
+      .grid-container {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      }
+    }
+    
+    /* 小屏幕时每行2个卡片 */
+    @media (max-width: 799px) {
+      .grid-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px;
+      }
+    }
+    
+    /* 统一卡片尺寸 */
+    .image-card {
+      background: rgba(30, 39, 46, 0.7);
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 380px; /* 固定高度 */
+    }
+    
+    .image-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        to bottom right,
+        rgba(0, 168, 255, 0.1) 0%,
+        rgba(0, 168, 255, 0) 50%,
+        rgba(0, 210, 211, 0.1) 100%
+      );
+      transform: rotate(30deg);
+      z-index: 0;
+    }
+    
+    .image-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0, 168, 255, 0.2);
+      border-color: rgba(0, 168, 255, 0.3);
+    }
+    
+    .image-card > * {
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* 统一图片尺寸 */
+    .image-card img {
+      width: 100%;
+      height: 220px; /* 固定图片高度 */
+      object-fit: cover; /* 保持图片比例 */
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: zoom-in;
+      transition: all 0.3s ease;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    
+    .image-card img:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3);
+    }
+    
+    .card-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 0 0 0;
+    }
+    
+    .card-type {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    
+    .price {
+      color: var(--accent-color);
+      font-weight: bold;
+      margin: 8px 0 5px;
+      font-size: 18px;
+    }
+    
+    .goods-info {
+      color: rgba(255, 255, 255, 0.9);
+      margin: 5px 0;
+      font-size: 13px;
+    }
+    
+    .link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: rgba(0, 168, 255, 0.2);
+      border-radius: 6px;
+      color: var(--primary-color);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 168, 255, 0.3);
+    }
+    
+    .link:hover {
+      background: rgba(0, 168, 255, 0.3);
+      color: white;
+      transform: translateY(-2px);
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 16px;
+      background: rgba(30, 39, 46, 0.5);
+      border-radius: 12px;
+      max-width: 800px;
+      margin: 0 auto;
+      grid-column: 1 / -1;
+    }
+    
+    /* 图片预览层样式 */
+    .preview-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 1003;
+      cursor: zoom-out;
+    }
+    
+    .preview-overlay.active {
+      display: flex;
+    }
+    
+    .preview-overlay img {
+      max-width: 90%;
+      max-height: 90%;
+      transform: scale(1);
+      transition: transform 0.3s ease;
+      box-shadow: 0 0 40px rgba(0, 168, 255, 0.3);
+      border-radius: 8px;
+    }
+    
+    .zoom-controls {
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      display: flex;
+      gap: 15px;
+    }
+    
+    .zoom-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(30, 39, 46, 0.8);
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .zoom-btn:hover {
+      background: var(--primary-color);
+      transform: scale(1.1);
+    }
+    
+    /* 售卖弹窗样式 - 修复滚动穿透问题 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1001;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+      display: flex;
+    }
+    
+    .modal-content {
+      background: rgba(30, 39, 46, 0.95);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 1800px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+    }
+    
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--primary-color);
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.6);
+      transition: all 0.3s ease;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    
+    .close-modal:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 修复滚动穿透 */
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      overscroll-behavior: contain; /* 防止滚动穿透到主页 */
+      -webkit-overflow-scrolling: touch; /* 移动端流畅滚动 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    
+    /* 售卖弹窗网格布局 */
+    .sales-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      justify-items: center;
+      align-items: start;
+    }
+    
+    @media (min-width: 1200px) {
+      .sales-grid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+    }
+    
+    .sales-card {
+      background: rgba(30, 39, 46, 0.7);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: auto;
+      min-height: 260px;
+    }
+    
+    .sales-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 30px rgba(0, 168, 255, 0.2);
+      border-color: rgba(0, 168, 255, 0.3);
+    }
+    
+    .sales-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: zoom-in;
+      transition: all 0.3s ease;
+    }
+    
+    .sales-card img:hover {
+      transform: scale(1.03);
+    }
+    
+    .sales-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding: 4px 0 0 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    
+    .sales-price {
+      color: var(--accent-color);
+      font-weight: bold;
+      margin: 0;
+      font-size: 16px;
+    }
+    
+    .sales-id {
+      color: rgba(255, 255, 255, 0.8);
+      margin: 0;
+      font-size: 12px;
+      min-height: 2.4em;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .sales-time {
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0;
+      font-size: 11px;
+    }
+    
+    .modal-loading {
+      text-align: center;
+      padding: 40px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .loading-indicator {
+      text-align: center;
+      padding: 20px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 14px;
+      display: none;
+    }
+    
+    .sales-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(30, 39, 46, 0.5);
+    }
+    
+    .pagination-btn {
+      padding: 8px 20px;
+      background: rgba(0, 168, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .pagination-btn:hover:not(:disabled) {
+      background: rgba(0, 168, 255, 0.4);
+      transform: translateY(-2px);
+    }
+    
+    .pagination-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .page-info {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      font-weight: 600;
+    }
+    
+    .page-size-select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(30, 39, 46, 0.7);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 14px;
+    }
+    
+    .total-info {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-left: 20px;
+    }
+    
+    /* 售卖弹窗内的筛选容器 */
+    .sales-filter-container {
+      display: flex;
+	  gap: 10px;
+      justify-content: center;
+      padding: 10px 20px;
+      background: rgba(30, 39, 46, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .header-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .price-filter-container {
+        justify-content: center;
+      }
+      
+      .image-card {
+        height: 350px;
+      }
+      
+      .image-card img {
+        height: 180px;
+      }
+      
+      /* 最近售卖弹窗响应式样式 */
+      /* 弹窗容器 */
+      .modal-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+      }
+      
+      /* 弹窗筛选容器 */
+      .sales-filter-container {
+        flex-direction: column;
+        gap: 8px !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* 筛选输入框和按钮 - 确保不超出屏幕 */
+      .sales-filter-container .filter-input {
+        width: calc(100% - 30px) !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+      }
+      
+      .sales-filter-container .btn {
+        width: calc(100% - 30px) !important;
+        margin: 0 auto !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* 统一按钮样式 */
+      .sales-filter-container .btn-danger {
+        background: transparent !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      }
+      
+      .sales-filter-container .btn-secondary {
+        background: transparent !important;
+      }
+      
+      /* 售卖卡片 - 采用首页卡片样式 */
+      .sales-card {
+        background: rgba(30, 39, 46, 0.7) !important;
+        border-radius: 15px !important;
+        padding: 10px !important;
+        text-align: center !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.3s ease !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 280px !important;
+      }
+      
+      .sales-card::before {
+        content: '' !important;
+        position: absolute !important;
+        top: -50% !important;
+        left: -50% !important;
+        width: 200% !important;
+        height: 200% !important;
+        background: linear-gradient(
+          to bottom right,
+          rgba(0, 168, 255, 0.1) 0%,
+          rgba(0, 168, 255, 0) 50%,
+          rgba(0, 210, 211, 0.1) 100%
+        ) !important;
+        transform: rotate(30deg) !important;
+        z-index: 0 !important;
+      }
+      
+      .sales-card:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 12px 40px rgba(0, 168, 255, 0.2) !important;
+        border-color: rgba(0, 168, 255, 0.3) !important;
+      }
+      
+      .sales-card > * {
+        position: relative !important;
+        z-index: 1 !important;
+      }
+      
+      /* 统一图片尺寸 */
+      .sales-card img {
+        width: 100% !important;
+        height: 160px !important;
+        object-fit: cover !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        cursor: zoom-in !important;
+        transition: all 0.3s ease !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+      }
+      
+      .sales-card img:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 15px rgba(0, 168, 255, 0.3) !important;
+      }
+      
+      /* 卡片内容紧凑 - 与首页卡片样式一致 */
+      .sales-content {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        padding: 2px 0 0 0 !important;
+      }
+      
+      .sales-price {
+        color: var(--accent-color) !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+      }
+      
+      .sales-id {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 11px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+        height: auto !important;
+        min-height: calc(1.3em * 2) !important;
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+      
+      .sales-time {
+        color: rgba(255, 255, 255, 0.6) !important;
+        font-size: 11px !important;
+        margin: 0 !important;
+        line-height: 1.1 !important;
+      }
+      
+      /* 售卖卡片高度自适应 */
+      .sales-card {
+        min-height: 240px !important;
+        height: auto !important;
+      }
+      
+      /* 统一元素间距为0，完全紧凑 */
+      .sales-content > * {
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      
+      /* 分页样式 */
+      .sales-pagination {
+        flex-wrap: wrap;
+        gap: 10px !important;
+        padding: 10px !important;
+      }
+      
+      .sales-pagination span,
+      .sales-pagination select {
+        margin: 0 !important;
+      }
+      
+      /* 网格布局 */
+      .sales-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 8px 15px !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        justify-items: center !important;
+        align-items: center !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1 class="page-title">X Meta 山海数藏交易查询工具</h1>
+      
+      <div class="rare-numbers">
+        <details>
+          <summary>
+            <span style="color: var(--primary-color);">自定义稀有款标准</span>
+            <span>（点击展开）</span>
+          </summary>
+          <div style="text-align: center;">
+            <input type="text" class="rare-keywords-input" id="rareKeywordsInput" 
+                   placeholder="输入稀有款关键词，用英文逗号分隔" 
+                   value="宇航员,机甲,飞行员,京剧">
+            <div class="rare-keywords-hint">多个关键词用英文逗号分隔，修改后会自动应用筛选</div>
+          </div>
+        </details>
+      </div>
+      
+      <div class="header-controls">
+        <!-- 刷新数据按钮 - PC和手机都显示 -->
+        <button class="btn btn-primary" onclick="fetchData()">
+          <span>📡</span>
+          <span>刷新数据</span>
+        </button>
+        
+        <!-- 平台选择器 - PC显示，手机隐藏（随筛选组件一起展开） -->
+        <select class="filter-input archive-select" id="platformSelect" style="min-width: 120px;">
+          <option value="xmate">XMATE</option>
+          <option value="品拍">品拍</option>
+        </select>
+        
+        <!-- 核心控制按钮容器 - 仅手机显示 -->
+        <div class="core-controls">
+          <!-- 搜索组件展开/折叠按钮 - 仅在手机上显示 -->
+          <button class="btn toggle-search-btn" onclick="toggleSearchComponents()">
+            <span>🔍</span>
+            <span id="toggleSearchText">展开搜索</span>
+          </button>
+        </div>
+        
+        <div class="filter-container">
+          <select class="filter-input archive-select" id="categorySelect">
+            <option value="all">全部分类</option>
+            <option value="character">精卫</option>
+            <option value="badge">徽章</option>
+		<option value="silu">丝路吉相</option>
+            <option value="cultural">因为长江</option>
+            <option value="painting">闲墨画意</option>
+		<option value="jiasu">文物加速中</option>
+		<option value="geyun">歌韵古今</option>
+          </select>
+          <select class="filter-input archive-select" id="archiveIdSelect">
+    
+          </select>
+          
+          <input type="text" class="filter-input" id="goodsNoFilter" placeholder="输入藏品ID进行筛选..." onkeypress="handleFilterKeypress(event)">
+          
+          <div class="price-filter-container"> 
+            <input type="number" class="filter-input price-input" id="minPriceFilter" placeholder="最低价" min="0">
+            <span>-</span>
+            <input type="number" class="filter-input price-input" id="maxPriceFilter" placeholder="最高价" min="0">
+          </div>
+          
+          <button class="btn btn-secondary" onclick="applyFilters()">
+            <span>🔍</span>
+            <span>筛选</span>
+          </button>
+          
+          <button class="btn btn-secondary" onclick="clearFilter()">
+            <span>🪮️</span>
+            <span>清除</span>
+          </button>
+          
+          <button class="btn btn-secondary" onclick="showRecentSales()">
+            <span>📚</span>
+            <span>最近售卖</span>
+          </button>
+        </div>
+      </div>
+      
+      <p id="summary" class="summary"></p>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">正在加载数据，请稍候...</div>
+  
+  <div class="divider-container" id="xiyouDivider">
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">稀有款</div>
+      <div class="divider-line"></div>
+    </div>
+  </div>
+  
+  <div class="grid-container" id="xiyou"></div>
+  
+  <div class="divider-container">
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">普通款</div>
+      <div class="divider-line"></div>
+    </div>
+  </div>
+  
+  <div class="grid-container" id="grid"></div>
+
+  <!-- 图片预览层 -->
+  <div class="preview-overlay" id="previewOverlay" onclick="closePreview(event)">
+    <img id="previewImage" src="" alt="预览">
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomIn(event)">＋</button>
+      <button class="zoom-btn" onclick="zoomOut(event)">－</button>
+      <button class="zoom-btn" onclick="closePreview(event)">✕</button>
+    </div>
+  </div>
+
+  <!-- 最近售卖弹窗 -->
+  <div class="modal-overlay" id="salesModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">最近售卖记录</h3>
+        <button class="close-modal" onclick="closeSalesModal()">×</button>
+      </div>
+      
+      <!-- 售卖弹窗筛选容器 -->
+      <div class="sales-filter-container">
+        <input type="text" class="filter-input" id="goodsNoSale" placeholder="输入藏品ID进行筛选..." onkeypress="handleSaleFilterKeypress(event)">
+        <button class="btn btn-secondary" onclick="applySaleFilter()">
+          <span>🔍</span>
+          <span>筛选</span>
+        </button>
+        <button class="btn btn-danger" onclick="clearSaleFilter()">
+          <span>🗑️</span>
+          <span>清除</span>
+        </button>
+      </div>
+      
+      <div class="modal-body" id="salesModalBody">
+        <div class="modal-loading" id="salesLoading">正在加载最近售卖数据...</div>
+        <div class="sales-grid" id="salesGrid"></div>
+        <div class="loading-indicator" id="loadMoreIndicator">正在加载更多数据...</div>
+      </div>
+      
+      <div class="sales-pagination" id="salesPagination" style="display: none;">
+        <!-- 移除分页按钮，只保留数量选择器 -->
+        <span style="color: var(--primary-color);">每页显示: </span>
+        <select class="page-size-select" id="pageSizeSelect" onchange="changePageSize()">
+          <option value="20">20</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+        </select>
+        <span class="total-info" id="totalInfo">共 0 条记录</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allItems = [];
+    let filteredXiyouItems = [];
+    let filteredNormalItems = [];
+    let xiyouKeywords = [];
+    let archiveDetails = {};
+    
+    // 商品分类数据
+    // 简化的商品数据列表，每个商品项包含xmate和pinpai两个平台的id
+    const goodsList = [
+      { xmate: '48792', pinpai: '16853', name: '精卫PFP', category: 'character' },
+      { xmate: '42423', pinpai: '15791', name: '创世徽章', category: 'badge' },
+      { xmate: '40969', pinpai: '16940', name: '湖湘金砖', category: 'geyun' },
+      { xmate: '49580', pinpai: '16853', name: '精卫', category: 'character' },
+      { xmate: '49478', pinpai: '16818', name: '素三彩鸭形香薰', category: 'cultural' },
+      { xmate: '49589', pinpai: '16845', name: '云纹漆鼎', category: 'cultural' },
+      { xmate: '49842', pinpai: '16934', name: '大铜马', category: 'cultural' },
+      { xmate: '50966', pinpai: '17000', name: '漳州窑绿彩阿拉伯文瓷盘', category: 'cultural' },
+      { xmate: '51184', pinpai: '17140', name: '鸟(鹰)纹彩陶壶', category: 'cultural' },
+      { xmate: '51183', pinpai: '17141', name: '渔猎采莲画像砖', category: 'cultural' },
+      { xmate: '53213', pinpai: '17139', name: '越王鹿郢剑', category: 'cultural' },
+      { xmate: '42935', pinpai: '15790', name: '兰亭序', category: 'painting' },
+      { xmate: '48455', pinpai: '15982', name: '琵琶行', category: 'painting' },
+      { xmate: '48278', pinpai: '15786', name: '枫溪垂钓图', category: 'painting' },
+      { xmate: '49013', pinpai: '16936', name: '竹石中堂', category: 'painting' },
+      { xmate: '49181', pinpai: '16933', name: '彩绘枇杷图', category: 'painting' },
+      { xmate: '49251', pinpai: '16935', name: '彩绘奔马轴', category: 'painting' },
+      { xmate: '40624', pinpai: '15805', name: '二十五弦瑟', category: 'geyun' },
+      { xmate: '40742', pinpai: '15803', name: '虎敔', category: 'geyun' },
+      { xmate: '40493', pinpai: '15808', name: '商铜豕磬', category: 'geyun' },
+      { xmate: '40743', pinpai: '15801', name: '凤箫', category: 'geyun' },
+      { xmate: '40491', pinpai: '15810', name: '象纹铜铙', category: 'geyun' },
+      { xmate: '40492', pinpai: '15807', name: '虎钮铜鎿于', category: 'geyun' },
+      { xmate: '40625', pinpai: '15804', name: '独幽七弦琴', category: 'geyun' },
+      { xmate: '40625', pinpai: '16973', name: '独幽雅乐', category: 'geyun' },
+      { xmate: '41902', pinpai: '15797', name: '白虎纹瓦当', category: 'jiasu' },
+      { xmate: '41968', pinpai: '15793', name: '大角盘羊纹彩陶罐', category: 'jiasu' },
+      { xmate: '43038', pinpai: '16938', name: '战国五牛盖铜贮贝器', category: 'jiasu' },
+      { xmate: '41903', pinpai: '15799', name: '吉藩九龙钮寿山石印', category: 'jiasu' },
+      { xmate: '41967', pinpai: '15795', name: '狐狸头青铜饰件', category: 'jiasu' },
+      { xmate: '45793', pinpai: '15788', name: '翔鹭纹铜鼓', category: 'jiasu' },
+      { xmate: '45792', pinpai: '15787', name: '羽纹铜凤灯', category: 'jiasu' },
+      { xmate: '53424', pinpai: '17159', name: '彩绘灰陶参军戏俑', category: 'silu' },
+      ];
+    
+    // 最近售卖相关变量
+    let currentSalesPage = 1;
+    let currentSalesPageSize = 50;
+    let totalSalesCount = 0;
+    let isSalesLoading = false;
+    let saleFilterKeyword = '';
+    let currentScale = 1;  // 图片预览缩放比例
+    let hasMoreSalesData = false;
+    let salesScrollHandler = null; // 滚动事件处理器
+
+    // 切换搜索组件展开/折叠状态
+    function toggleSearchComponents() {
+      const headerControls = document.querySelector('.header-controls');
+      const toggleSearchText = document.getElementById('toggleSearchText');
+      
+      // 切换展开/折叠状态
+      headerControls.classList.toggle('expanded');
+      
+      // 更新按钮文本
+      if (headerControls.classList.contains('expanded')) {
+        toggleSearchText.textContent = '收起搜索';
+      } else {
+        toggleSearchText.textContent = '展开搜索';
+      }
+    }
+    
+    // 获取archiveId
+    function getArchiveId() {
+      const select = document.getElementById('archiveIdSelect');
+      return select && select.value ? select.value : "48792";
+    }
+    
+    // 获取当前选择的平台
+    function getCurrentPlatform() {
+      const platformSelect = document.getElementById('platformSelect');
+      return platformSelect && platformSelect.value ? platformSelect.value : 'xmate';
+    }
+    
+    // 标志位，用于控制是否跳过fetchData()调用
+    let skipNextFetchData = false;
+    
+    // 分类联动函数
+    function updateGoodsByCategory() {
+      const categorySelect = document.getElementById('categorySelect');
+      const archiveIdSelect = document.getElementById('archiveIdSelect');
+      if (!categorySelect || !archiveIdSelect) return;
+      
+      const selectedCategory = categorySelect.value;
+      const currentSelectedGoods = archiveIdSelect.value;
+      const currentPlatform = getCurrentPlatform();
+      
+      // 设置标志位，跳过下一次由DOM更新触发的fetchData()调用
+      skipNextFetchData = true;
+      
+      // 清空现有选项
+      archiveIdSelect.innerHTML = '';
+      
+      // 根据选中的分类过滤商品列表
+      let filteredGoods;
+      if (selectedCategory === 'all') {
+        filteredGoods = goodsList;
+      } else {
+        filteredGoods = goodsList.filter(goods => goods.category === selectedCategory);
+      }
+      
+      // 添加新选项，根据平台选择对应的id
+      filteredGoods.forEach(goods => {
+        const option = document.createElement('option');
+        // 根据当前平台选择对应的id字段
+        const platformId = currentPlatform === 'xmate' ? goods.xmate : goods.pinpai;
+        option.value = platformId;
+        option.textContent = goods.name;
+        if (platformId === currentSelectedGoods) {
+          option.selected = true;
+        }
+        archiveIdSelect.appendChild(option);
+      });
+      
+      // 如果当前选中的商品不在新的商品列表中，则选择第一个商品
+      if (!archiveIdSelect.value) {
+        archiveIdSelect.selectedIndex = 0;
+      }
+      
+      // 重置标志位，确保用户手动选择商品时能正常触发fetchData()
+      skipNextFetchData = false;
+      
+      // 直接触发数据刷新
+      fetchData();
+    }
+
+    // 获取稀有款关键词
+    function getXiyouKeywords() {
+      const input = document.getElementById('rareKeywordsInput');
+      if (input && input.value.trim()) {
+        return input.value.split(',').map(keyword => keyword.trim()).filter(keyword => keyword.length > 0);
+      }
+      return xiyouKeywords;
+    }
+
+    // 获取商品详情信息  
+    async function fetchArchiveDetails() {
+      const archiveId = getArchiveId();
+      
+      if (archiveDetails[archiveId]) {
+        const archiveData = archiveDetails[archiveId];
+        if (archiveData && archiveData.archiveName) {
+          const pageTitleElement = document.getElementById('pageTitle');
+          if (pageTitleElement) {
+            pageTitleElement.textContent = `X Meta ${archiveData.archiveName}交易实时预览`;
+          }
+        }
+        return archiveData;
+      }
+
+      const url = "https://api.x-metash.cn/h5/goods/archive";
+      const headers = {
+        'accept': '*/*',
+        'content-type': 'application/json',
+        'origin': 'https://xmeta.x-metash.cn',
+        'referer': 'https://xmeta.x-metash.cn/',
+      };
+
+      const body = {
+        archiveId: archiveId,
+        platformId: "923",
+        source: "1",
+        page: 1,
+        pageSize: 20,
+        sellStatus: 1
+      };
+
+      try {
+        const resp = await fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body),
+            mode: 'cors',
+            credentials: 'omit'
+          });
+
+        if (!resp.ok) throw new Error(`商品详情请求失败: ${resp.status}`);
+        const result = await resp.json();
+        if (result.code !== 200) throw new Error(`商品详情API错误: ${result.msg}`);
+
+        const archiveData = result.data;
+        if (archiveData && archiveData.archiveName) {
+          const pageTitleElement = document.getElementById('pageTitle');
+          if (pageTitleElement) {
+            pageTitleElement.textContent = `X Meta ${archiveData.archiveName}交易实时预览`;
+          }
+          archiveDetails[archiveId] = archiveData;
+          return archiveData;
+        }
+      } catch (error) {
+        console.warn('获取商品详情失败:', error);
+        const pageTitleElement = document.getElementById('pageTitle');
+        if (pageTitleElement) {
+          pageTitleElement.textContent = 'X Meta 山海数藏交易平台';
+        }
+      }
+      return null;
+    }
+
+    // 获取商品图片URL
+    function getGoodsImageUrl(item, archiveData) {
+      if (item.pfpImg && item.pfpImg.trim() !== '') {
+        return item.pfpImg;
+      }
+      if (archiveData && archiveData.archiveImage && Array.isArray(archiveData.archiveImage) && archiveData.archiveImage.length > 0) {
+        return archiveData.archiveImage[0];
+      }
+      return '';
+    }
+
+    // 图片加载函数
+    function loadImage(imgElement, imageUrl) {
+      if (!imageUrl) {
+        imgElement.src = '';
+        return;
+      }
+
+      // 设置加载状态
+      imgElement.style.opacity = '0.3';
+      
+      imgElement.onload = () => {
+        imgElement.style.opacity = '1';
+      };
+      imgElement.onerror = () => {
+        imgElement.src = '';
+        imgElement.style.opacity = '1';
+      };
+      imgElement.src = imageUrl;
+    }
+
+    // 加载数据
+    async function fetchData() {
+      const grid = document.getElementById('grid');
+      const xiyou = document.getElementById('xiyou');
+      const loading = document.getElementById('loading');
+      const summary = document.getElementById('summary');
+      if (!grid || !xiyou || !loading || !summary) {
+        console.error('缺少必要的DOM元素');
+        return;
+      }
+      
+      grid.innerHTML = '';
+      xiyou.innerHTML = '';
+      loading.style.display = 'block';
+      summary.textContent = '';
+      
+      // 清空筛选条件
+      const goodsNoFilter = document.getElementById('goodsNoFilter');
+      const minPriceFilter = document.getElementById('minPriceFilter');
+      const maxPriceFilter = document.getElementById('maxPriceFilter');
+      if (goodsNoFilter) goodsNoFilter.value = '';
+      if (minPriceFilter) minPriceFilter.value = '';
+      if (maxPriceFilter) maxPriceFilter.value = '';
+
+      const archiveId = getArchiveId();
+      const currentPlatform = getCurrentPlatform();
+      let archiveData = null;
+      
+      // 只有xmate平台需要获取archiveDetails
+      if (currentPlatform === 'xmate') {
+        archiveData = await fetchArchiveDetails();
+      }
+
+      let page = 1;
+      const pageSize = 100;
+      allItems = [];
+      filteredXiyouItems = [];
+      filteredNormalItems = [];
+
+      try {
+        if (currentPlatform === 'xmate') {
+          // xmate平台数据获取逻辑
+          const url = "https://api.x-metash.cn/h5/goods/archiveGoods";
+          const headers = {
+            'accept': '*/*',
+            'content-type': 'application/json',
+            'origin': 'https://xmeta.x-metash.cn',
+            'referer': 'https://xmeta.x-metash.cn/',
+          };
+          
+          while (true) {
+            const body = {
+              archiveId: archiveId,
+              platformId: "923",
+              source: "1",
+              page: page,
+              pageSize: pageSize,
+              sellStatus: 1
+            };
+
+            const resp = await fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body),
+            mode: 'cors',
+            credentials: 'omit'
+          });
+
+            if (!resp.ok) {
+              console.error(`第${page}页请求失败`, resp.status);
+              break;
+            }
+
+            const result = await resp.json();
+            if (result.code !== 200) {
+              console.error("API返回错误：", result.msg);
+              break;
+            }
+
+            const goods = result.data?.goodsArchiveList || [];
+            if (goods.length === 0) {
+              console.log(`第${page}页无数据，结束`);
+              break;
+            }
+
+            // 为xmate数据添加平台标识
+            goods.forEach(item => {
+              item.platform = 'xmate';
+            });
+            
+            allItems = allItems.concat(goods);
+            console.log(`第${page}页获取 ${goods.length} 条数据`);
+
+            if (goods.length < pageSize) break;
+            page++;
+          }
+        } else if (currentPlatform === '品拍') {
+           // 品拍平台数据获取逻辑
+          const url = "/api/data";
+          const headers = {
+            'accept': '*/*',
+            'content-type': 'application/json'
+          };
+          
+          while (true) {
+            const body = {
+              template_id: archiveId,
+              limit: pageSize,
+              is_sell: 0,
+              type: 1,
+              page: page,
+              is_booking: 2,
+              version: "1.5.2"
+            };
+
+            const resp = await fetch(url, {
+              method: "POST",
+              headers: headers,
+              body: JSON.stringify(body),
+              mode: 'cors',
+              credentials: 'omit'
+            });
+
+            if (!resp.ok) {
+              console.error(`第${page}页请求失败`, resp.status);
+              break;
+            }
+
+            const result = await resp.json();
+            if (result.code !== 1) {
+              console.error("API返回错误：", result.msg);
+              break;
+            }
+
+            const goods = result.data?.data || [];
+            if (goods.length === 0) {
+              console.log(`第${page}页无数据，结束`);
+              break;
+            }
+
+            // 转换品拍数据格式为统一格式
+            const formattedGoods = goods.map(item => {
+              // 处理图片，取最后一张如果有多个
+              // 直接使用images字段，这是品拍平台图片的主要来源
+              let imageUrl = '';
+              
+              if (item.images) {
+                // 如果images是字符串且包含逗号，按逗号分割取最后一张
+                if (typeof item.images === 'string') {
+                  if (item.images.includes(',')) {
+                    const imagesArray = item.images.split(',').map(img => img.trim()).filter(img => img);
+                    if (imagesArray.length > 0) {
+                      imageUrl = imagesArray[imagesArray.length - 1];
+                    }
+                  } else {
+                    // 只有一张图片
+                    imageUrl = item.images;
+                  }
+                } else if (Array.isArray(item.images) && item.images.length > 0) {
+                  // 如果是数组，直接取最后一张
+                  imageUrl = item.images[item.images.length - 1];
+                }
+              }
+              
+              // 如果images字段为空，才使用item.image作为备选
+              if (!imageUrl && item.image) {
+                imageUrl = item.image;
+              }
+              
+              // 去除图片链接中的反斜杠转义字符
+              if (imageUrl) {
+                imageUrl = imageUrl.replace(/\\/g, '');
+              }
+              
+              return {
+                goodsId: item.id,
+                goodsNo: item.sn , // 品拍没有goodsNo，用sn或title代替
+                goodsPrice: item.price,
+                pfpImg: imageUrl,
+                platform: '品拍',
+                // 保留原始数据，方便后续使用
+                originalData: item
+              };
+            });
+            
+            allItems = allItems.concat(formattedGoods);
+            console.log(`第${page}页获取 ${goods.length} 条数据`);
+
+            // 检查是否还有更多数据
+            const totalPages = result.data?.last_page || 1;
+            if (page >= totalPages) break;
+            page++;
+          }
+        }
+
+        loading.style.display = 'none';
+        filteredXiyouItems = [...allItems.filter(item => isXiyouItem(item))];
+        filteredNormalItems = [...allItems.filter(item => !isXiyouItem(item))];
+        renderItems(archiveData);
+        updateSummary();
+
+      } catch (err) {
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+        loading.textContent = `品拍数据读取需要临时关闭谷歌浏览器的跨域校验，方法如下：
+
+Windows：按Win+R，输入cmd打开命令提示符，在弹窗中输入 "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --disable-web-security --user-data-dir=C:\\TempChromeData 启动浏览器，然后将文件拖动到浏览器打开即可
+
+Mac：打开终端输入以下命令：open -n /Applications/Google\\ Chrome.app --args --disable-web-security --user-data-dir=/tmp/chrome_dev_test 回车启动浏览器，然后将文件拖动到浏览器打开即可`;
+        } else {
+          loading.textContent = `❌ 请求失败: ${err.message}`;
+        }
+        console.error('数据获取失败:', err);
+      }
+    }
+
+    // 判断是否为稀有款
+    function isXiyouItem(item) {
+      const currentPlatform = getCurrentPlatform();
+      const keywords = getXiyouKeywords();
+      
+      // 根据平台不同，稀有款判断逻辑可能有所不同
+      if (currentPlatform === 'xmate') {
+        // xmate平台的稀有款判断逻辑
+        if (keywords.some(keyword => item.goodsNo && item.goodsNo.toString().includes(keyword))) {
+          return true;
+        }
+      } else if (currentPlatform === '品拍') {
+        // 品拍平台的稀有款判断逻辑
+        // 假设品拍平台的稀有款判断逻辑与xmate相同，根据实际情况调整
+        if (keywords.some(keyword => item.goodsNo && item.goodsNo.toString().includes(keyword))) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // 应用筛选
+    function applyFilters() {
+      const goodsNoFilter = document.getElementById('goodsNoFilter').value.trim();
+      const minPrice = parseFloat(document.getElementById('minPriceFilter').value) || 0;
+      const maxPrice = parseFloat(document.getElementById('maxPriceFilter').value) || Infinity;
+      const archiveId = getArchiveId();
+      const archiveData = archiveDetails[archiveId];
+      
+      filteredXiyouItems = allItems.filter(item => {
+        const isXiyou = isXiyouItem(item);
+        const matchesGoodsNo = !goodsNoFilter || (item.goodsNo && item.goodsNo.toString().includes(goodsNoFilter));
+        const price = parseFloat(item.goodsPrice) || 0;
+        const matchesPrice = price >= minPrice && price <= maxPrice;
+        return isXiyou && matchesGoodsNo && matchesPrice;
+      });
+      
+      filteredNormalItems = allItems.filter(item => {
+        const isNormal = !isXiyouItem(item);
+        const matchesGoodsNo = !goodsNoFilter || (item.goodsNo && item.goodsNo.toString().includes(goodsNoFilter));
+        const price = parseFloat(item.goodsPrice) || 0;
+        const matchesPrice = price >= minPrice && price <= maxPrice;
+        return isNormal && matchesGoodsNo && matchesPrice;
+      });
+      
+      renderItems(archiveData);
+      updateSummary();
+    }
+
+    // 清空筛选
+    function clearFilter() {
+      document.getElementById('goodsNoFilter').value = '';
+      document.getElementById('minPriceFilter').value = '';
+      document.getElementById('maxPriceFilter').value = '';
+      const archiveId = getArchiveId();
+      const archiveData = archiveDetails[archiveId];
+      filteredXiyouItems = allItems.filter(item => isXiyouItem(item));
+      filteredNormalItems = allItems.filter(item => !isXiyouItem(item));
+      renderItems(archiveData);
+      updateSummary();
+    }
+
+    // 筛选输入框回车事件
+    function handleFilterKeypress(event) {
+      if (event.key === 'Enter') {
+        applyFilters();
+      }
+    }
+
+    // 渲染商品
+    function renderItems(archiveData) {
+      const grid = document.getElementById('grid');
+      const xiyou = document.getElementById('xiyou');
+      const xiyouDivider = document.getElementById('xiyouDivider');
+      if (!grid || !xiyou || !xiyouDivider) return;
+      
+      grid.innerHTML = '';
+      xiyou.innerHTML = '';
+
+      // 渲染稀有款
+      if (filteredXiyouItems.length === 0) {
+        // 稀有款数据为空，隐藏标题和容器
+        xiyouDivider.style.display = 'none';
+        xiyou.style.display = 'none';
+      } else {
+        // 稀有款数据不为空，显示标题和容器
+        xiyouDivider.style.display = 'block';
+        xiyou.style.display = 'grid';
+        filteredXiyouItems.forEach((item, index) => {
+          const card = createItemCard(item, archiveData, '稀有款', index + 1, '#00d2d3');
+          xiyou.appendChild(card);
+        });
+      }
+
+      // 渲染普通款
+      if (filteredNormalItems.length === 0) {
+        grid.innerHTML = '<p class="no-results">没有找到匹配的普通款商品</p>';
+      } else {
+        filteredNormalItems.forEach((item, index) => {
+          const card = createItemCard(item, archiveData, '普通款', index + 1, '#f5f6fa');
+          grid.appendChild(card);
+        });
+      }
+    }
+
+    // 创建商品卡片
+    function createItemCard(item, archiveData, type, index, color) {
+      const card = document.createElement('div');
+      card.className = 'image-card';
+      
+      // 根据平台生成不同的购买链接
+      let detailLink;
+      if (item.platform === 'xmate') {
+        detailLink = `https://xmeta.x-metash.cn/prod/xmeta_mall/index.html#/pages/goodsDetail/index?id=${item.goodsId}`;
+      } else if (item.platform === '品拍') {
+        detailLink = `https://h5.zgysmjw.cn/#/pages/goodsDetail/index?id=${item.goodsId}`;
+      } else {
+        detailLink = '#';
+      }
+      
+      const imageUrl = getGoodsImageUrl(item, archiveData);
+      
+      card.innerHTML = `
+        <img src="" alt="图片加载中..." data-src="${imageUrl}">
+        <div class="card-content">
+          <div class="card-type" style="color: ${color};">${type} ${index}</div>
+          <div class="price">💰 ${item.goodsPrice ?? '未知价格'}</div>
+          <div class="goods-info">藏品ID：${item.goodsNo || '未知'}</div>
+          <a href="${detailLink}" class="link" target="_blank">💵 快速购买</a>
+        </div>
+      `;
+      
+      const img = card.querySelector('img');
+      loadImage(img, imageUrl);
+      img.onclick = () => openPreview(imageUrl);
+      
+      return card;
+    }
+
+    // 更新摘要
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      if (!summary) return;
+      
+      const goodsNoFilter = document.getElementById('goodsNoFilter').value.trim();
+      const minPrice = parseFloat(document.getElementById('minPriceFilter').value) || 0;
+      const maxPrice = parseFloat(document.getElementById('maxPriceFilter').value) || Infinity;
+      const archiveId = getArchiveId();
+      
+      const totalXiyou = allItems.filter(item => isXiyouItem(item)).length;
+      const totalNormal = allItems.filter(item => !isXiyouItem(item)).length;
+      
+      let filterText = '';
+      if (archiveId && archiveId !== "48792") {
+        filterText += `商品ID: ${archiveId}`;
+      }
+      if (goodsNoFilter) {
+        if (filterText) filterText += ' | ';
+        filterText += `藏品ID: ${goodsNoFilter}`;
+      }
+      if (minPrice || maxPrice) {
+        if (filterText) filterText += ' | ';
+        filterText += `价格: ${minPrice || '0'} - ${maxPrice || '∞'}`;
+      }
+      
+      if (filterText) {
+        summary.textContent = `筛选条件: ${filterText} | 稀有款: ${filteredXiyouItems.length}/${totalXiyou} | 普通款: ${filteredNormalItems.length}/${totalNormal} | 总计: ${filteredXiyouItems.length + filteredNormalItems.length}/${allItems.length}`;
+      } else {
+        summary.textContent = `商品ID: ${archiveId} | 稀有款: ${totalXiyou} | 普通款: ${totalNormal} | 总计: ${allItems.length}`;
+      }
+    }
+
+    // ===== 图片预览功能 =====
+    function openPreview(src) {
+      const overlay = document.getElementById('previewOverlay');
+      const img = document.getElementById('previewImage');
+      
+      if (!overlay || !img) return;
+      
+      img.onload = () => {
+        overlay.style.display = 'flex';
+        overlay.classList.add('active');
+        currentScale = 1;
+        img.style.transform = `scale(${currentScale})`;
+      };
+      img.src = src;
+    }
+
+    function closePreview(event) {
+      if (event) event.stopPropagation();
+      const overlay = document.getElementById('previewOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+      }
+    }
+
+    function zoomIn(event) {
+      if (event) event.stopPropagation();
+      const img = document.getElementById('previewImage');
+      if (img) {
+        currentScale += 0.2;
+        img.style.transform = `scale(${currentScale})`;
+      }
+    }
+
+    function zoomOut(event) {
+      if (event) event.stopPropagation();
+      const img = document.getElementById('previewImage');
+      if (img) {
+        currentScale = Math.max(0.4, currentScale - 0.2);
+        img.style.transform = `scale(${currentScale})`;
+      }
+    }
+
+    // 事件监听
+    document.getElementById('minPriceFilter').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        applyFilters();
+      }
+    });
+    
+    document.getElementById('maxPriceFilter').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        applyFilters();
+      }
+    });
+
+    document.getElementById('rareKeywordsInput').addEventListener('input', function() {
+      applyFilters();
+    });
+
+    document.getElementById('archiveIdSelect').addEventListener('change', function(e) {
+      // 检查是否是程序自动触发的change事件
+      if (e.isTrusted === false || skipNextFetchData) {
+        // 如果不是用户手动触发的事件，或者设置了跳过标志位，重置标志位并跳过本次fetchData()调用
+        skipNextFetchData = false;
+        return;
+      }
+      fetchData();
+    });
+    
+    document.getElementById('categorySelect').addEventListener('change', function() {
+      updateGoodsByCategory();
+    });
+    
+    // 修改页面标题
+    function updatePageTitle(platform) {
+      const titleElement = document.querySelector('title');
+      if (titleElement) {
+        titleElement.textContent = `${platform} 山海数藏交易平台`;
+      }
+      
+      // 同时更新页面内的标题
+      const pageTitleElement = document.querySelector('.page-title');
+      if (pageTitleElement) {
+        pageTitleElement.innerHTML = `${platform} 山海数藏交易查询工具`;
+      }
+    }
+    
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', function() {
+      updateGoodsByCategory();
+      // 设置标志位，跳过window.onload中的fetchData()调用
+      skipNextFetchData = true;
+      
+      // 平台选择下拉框事件监听
+      const platformSelect = document.getElementById('platformSelect');
+      if (platformSelect) {
+        // 初始化标题
+        updatePageTitle(platformSelect.value);
+        
+        // 添加change事件监听
+        platformSelect.addEventListener('change', function() {
+          updatePageTitle(this.value);
+          updateGoodsByCategory();
+        });
+      }
+    });
+    
+    // 售卖筛选输入框回车事件
+    function handleSaleFilterKeypress(event) {
+      if (event.key === 'Enter') {
+        applySaleFilter();
+      }
+    }
+    
+    // ===== 最近售卖功能 =====
+    // 显示最近售卖弹窗
+    async function showRecentSales() {
+      const modal = document.getElementById('salesModal');
+      if (!modal) return;
+      
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
+      
+      // 初始化状态
+      currentSalesPage = 1;
+      saleFilterKeyword = document.getElementById('goodsNoSale').value.trim();
+      hasMoreSalesData = true;
+      
+      // 清除滚动监听器
+      removeScrollListener();
+      
+      // 设置滚动监听
+      setupScrollListener();
+      
+      // 清空现有数据
+      const salesGrid = document.getElementById('salesGrid');
+      if (salesGrid) salesGrid.innerHTML = '';
+      
+      // 显示加载状态
+      const loadingElement = document.getElementById('salesLoading');
+      if (loadingElement) {
+        loadingElement.style.display = 'block';
+        loadingElement.textContent = '正在加载最近售卖数据...';
+      }
+      
+      // 隐藏加载更多指示器
+      const loadMoreIndicator = document.getElementById('loadMoreIndicator');
+      if (loadMoreIndicator) {
+        loadMoreIndicator.style.display = 'none';
+      }
+      
+      // 加载第一页数据
+      await loadSalesData(1, currentSalesPageSize);
+    }
+    
+    // 设置滚动监听
+    function setupScrollListener() {
+      const modalBody = document.getElementById('salesModalBody');
+      if (!modalBody) return;
+      
+      salesScrollHandler = function() {
+        if (isSalesLoading || !hasMoreSalesData) return;
+        
+        const scrollTop = modalBody.scrollTop;
+        const scrollHeight = modalBody.scrollHeight;
+        const clientHeight = modalBody.clientHeight;
+        
+        // 滚动到底部附近时加载更多
+        if (scrollTop + clientHeight >= scrollHeight - 100) {
+          loadMoreSalesData();
+        }
+      };
+      
+      modalBody.addEventListener('scroll', salesScrollHandler);
+    }
+    
+    // 移除滚动监听
+    function removeScrollListener() {
+      const modalBody = document.getElementById('salesModalBody');
+      if (modalBody && salesScrollHandler) {
+        modalBody.removeEventListener('scroll', salesScrollHandler);
+        salesScrollHandler = null;
+      }
+    }
+    
+    // 加载更多数据
+    async function loadMoreSalesData() {
+      if (isSalesLoading || !hasMoreSalesData) return;
+      
+      currentSalesPage++;
+      await loadSalesData(currentSalesPage, currentSalesPageSize, true);
+    }
+    
+    // 加载售卖数据
+    async function loadSalesData(page, pageSize, isLoadMore = false) {
+      if (isSalesLoading) return;
+      
+      isSalesLoading = true;
+      const modalBody = document.getElementById('salesModalBody');
+      const loadingElement = document.getElementById('salesLoading');
+      const loadMoreIndicator = document.getElementById('loadMoreIndicator');
+      const pagination = document.getElementById('salesPagination');
+      const totalInfo = document.getElementById('totalInfo');
+      
+      if (!modalBody) {
+        isSalesLoading = false;
+        return;
+      }
+      
+      try {
+        if (page === 1 && !isLoadMore) {
+          // 第一页，清空并显示加载状态
+          const salesGrid = document.getElementById('salesGrid');
+          if (salesGrid) salesGrid.innerHTML = '';
+          
+          if (loadingElement) {
+            loadingElement.style.display = 'block';
+            loadingElement.textContent = '正在加载最近售卖数据...';
+          }
+        } else if (isLoadMore && loadMoreIndicator) {
+          // 加载更多，显示加载指示器
+          loadMoreIndicator.style.display = 'block';
+        }
+        
+        if (pagination) pagination.style.display = 'none';
+        
+        const archiveId = getArchiveId();
+        const currentPlatform = getCurrentPlatform();
+        let salesItems = [];
+        let totalSalesCount = 0;
+        
+        if (currentPlatform === 'xmate') {
+          // xmate平台最近售卖数据获取
+          const url = "https://api.x-metash.cn/h5/goods/archiveGoods";
+          const headers = {
+            'accept': '*/*',
+            'content-type': 'application/json',
+            'origin': 'https://xmeta.x-metash.cn',
+            'referer': 'https://xmeta.x-metash.cn/',
+          };
+          
+          const body = {
+            archiveId: archiveId,
+            platformId: "923",
+            goodsNo: saleFilterKeyword || "",
+            source: "1",
+            page: page,
+            pageSize: pageSize,
+            sellStatus: 2
+          };
+
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body)
+          });
+
+          if (!resp.ok) throw new Error(`请求失败: ${resp.status}`);
+          const result = await resp.json();
+          if (result.code !== 200) throw new Error(`API返回错误: ${result.msg}`);
+
+          salesItems = result.data?.goodsArchiveList || [];
+          totalSalesCount = result.data?.total || 0;
+        } else if (currentPlatform === '品拍') {
+           // 品拍平台最近售卖数据获取
+          const url = "/api/data";
+          const headers = {
+            'accept': '*/*',
+            'content-type': 'application/json',
+          };
+          
+          // 构建请求体，使用用户提供的参数
+          const body = {
+            template_id: archiveId,
+            limit: pageSize,
+            page: page,
+            type: 1,
+            is_sell: 1, // 已售出的商品
+            search: saleFilterKeyword, // 搜索内容
+            sort: "id",
+            order: "desc",
+            is_booking: 2,
+            version: "1.5.2"
+          };
+
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body),
+            mode: 'cors',
+            credentials: 'omit'
+          });
+
+          if (!resp.ok) {
+            throw new Error(`请求失败: ${resp.status}`);
+          }
+          const result = await resp.json();
+          if (result.code !== 1) {
+            throw new Error(`API返回错误: ${result.msg}`);
+          }
+
+          const goods = result.data?.data || [];
+          totalSalesCount = result.data?.total || 0;
+          
+          // 转换品拍数据格式为统一格式，保持与xmate一致
+          salesItems = goods.map(item => {
+            // 处理图片，取最后一张如果有多个
+            // 直接使用images字段，这是品拍平台图片的主要来源
+            let imageUrl = '';
+            
+            if (item.images) {
+              // 如果images是字符串且包含逗号，按逗号分割取最后一张
+              if (typeof item.images === 'string') {
+                if (item.images.includes(',')) {
+                  const imagesArray = item.images.split(',').map(img => img.trim()).filter(img => img);
+                  if (imagesArray.length > 0) {
+                    imageUrl = imagesArray[imagesArray.length - 1];
+                  }
+                } else {
+                  // 只有一张图片
+                  imageUrl = item.images;
+                }
+              } else if (Array.isArray(item.images) && item.images.length > 0) {
+                // 如果是数组，直接取最后一张
+                imageUrl = item.images[item.images.length - 1];
+              }
+            }
+            
+            // 如果images字段为空，才使用item.image作为备选
+            if (!imageUrl && item.image) {
+              imageUrl = item.image;
+            }
+            
+            // 去除图片链接中的反斜杠转义字符
+            if (imageUrl) {
+              imageUrl = imageUrl.replace(/\\/g, '');
+            }
+            
+            // 使用pay_time作为售卖时间，如果不存在则使用createtime或当前时间
+            const saleTime = item.pay_time ? parseInt(item.pay_time) * 1000 : 
+                            (item.createtime ? parseInt(item.createtime) * 1000 : Date.now());
+            
+            return {
+              goodsId: item.id,
+              goodsNo: item.sn , // 品拍没有goodsNo，用sn或title代替
+              goodsPrice: item.price,
+              pfpImg: imageUrl,
+              timePass: saleTime, // 转换为毫秒时间戳
+              platform: '品拍',
+              originalData: item
+            };
+          });
+        }
+        
+        if (salesItems.length === 0) {
+          if (page === 1) {
+            if (loadingElement) {
+              loadingElement.textContent = '暂无售卖记录';
+            }
+          }
+          hasMoreSalesData = false;
+          
+          if (loadMoreIndicator) {
+            loadMoreIndicator.style.display = 'none';
+          }
+          
+          isSalesLoading = false;
+          return;
+        }
+        
+        // 获取商品详情信息用于图片显示
+        const archiveData = await fetchArchiveDetails();
+        
+        if (loadingElement) {
+          loadingElement.style.display = 'none';
+        }
+        
+        if (pagination) {
+          pagination.style.display = 'flex';
+        }
+        
+        // 创建或获取网格容器
+        let salesGrid = document.getElementById('salesGrid');
+        if (!salesGrid) {
+          salesGrid = document.createElement('div');
+          salesGrid.className = 'sales-grid';
+          salesGrid.id = 'salesGrid';
+          modalBody.appendChild(salesGrid);
+        }
+        
+        // 渲染售卖数据
+        salesItems.forEach((item, index) => {
+          const saleTime = item.timePass;
+          const timeText = saleTime ? new Date(saleTime).toLocaleString('zh-CN') : '时间未知';
+          const imageUrl = getGoodsImageUrl(item, archiveData);
+          
+          const salesCard = document.createElement('div');
+          salesCard.className = 'sales-card';
+          salesCard.innerHTML = `
+            <img src="" alt="图片${index + 1}" data-src="${imageUrl}">
+            <div class="sales-content">
+              <div class="sales-price">💰 ${item.goodsPrice || '未知价格'}</div>
+              <div class="sales-id">藏品ID: ${item.goodsNo || '未知'}</div>
+              <div class="sales-time">售卖时间：${timeText}</div>
+            </div>
+          `;
+          salesGrid.appendChild(salesCard);
+          
+          // 加载图片
+          const img = salesCard.querySelector('img');
+          if (imageUrl) {
+            loadImage(img, imageUrl);
+            img.onclick = () => openPreview(imageUrl);
+          }
+        });
+        
+        // 更新总数信息
+        if (totalInfo) {
+          const loadedCount = page * pageSize;
+          const displayCount = Math.min(loadedCount, totalSalesCount);
+          totalInfo.textContent = `共 ${totalSalesCount} 条记录，已加载 ${displayCount} 条`;
+        }
+        
+        // 检查是否还有更多数据
+        hasMoreSalesData = (page * pageSize) < totalSalesCount;
+        
+        if (!hasMoreSalesData) {
+          if (loadMoreIndicator) {
+            loadMoreIndicator.style.display = 'none';
+          }
+        }
+        
+      } catch (error) {
+        console.error('加载售卖数据失败:', error);
+        if (loadingElement) {
+          loadingElement.textContent = `加载失败: ${error.message}`;
+        }
+      } finally {
+        isSalesLoading = false;
+        if (loadMoreIndicator) {
+          loadMoreIndicator.style.display = 'none';
+        }
+      }
+    }
+    
+    // 更改每页显示数量
+    async function changePageSize() {
+      if (isSalesLoading) return;
+      
+      const pageSizeSelect = document.getElementById('pageSizeSelect');
+      const newPageSize = parseInt(pageSizeSelect.value) || 50;
+      if (newPageSize === currentSalesPageSize) return;
+      
+      currentSalesPageSize = newPageSize;
+      currentSalesPage = 1;
+      hasMoreSalesData = true;
+      
+      await loadSalesData(currentSalesPage, currentSalesPageSize);
+    }
+    
+    // 应用售卖筛选
+    async function applySaleFilter() {
+      const goodsNoSaleInput = document.getElementById('goodsNoSale');
+      saleFilterKeyword = goodsNoSaleInput ? goodsNoSaleInput.value.trim() : '';
+      currentSalesPage = 1;
+      hasMoreSalesData = true;
+      
+      await loadSalesData(currentSalesPage, currentSalesPageSize);
+    }
+    
+    // 清除售卖筛选
+    function clearSaleFilter() {
+      const goodsNoSaleInput = document.getElementById('goodsNoSale');
+      if (goodsNoSaleInput) {
+        goodsNoSaleInput.value = '';
+      }
+      saleFilterKeyword = '';
+      currentSalesPage = 1;
+      hasMoreSalesData = true;
+      showRecentSales();
+    }
+
+    // 关闭售卖弹窗
+    function closeSalesModal() {
+      const modal = document.getElementById('salesModal');
+      if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // 恢复滚动
+      }
+      removeScrollListener();
+    }
+
+    // 页面加载时自动拉取数据
+    window.onload = function() {
+      if (skipNextFetchData) {
+        // 如果DOMContentLoaded中已经加载了数据，跳过本次调用
+        skipNextFetchData = false;
+        return;
+      }
+      fetchData();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="referrer" content="no-referrer"> 
+    <title>精卫画册电子版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+		body {
+			background: url('https://img.shuziwenbo.cn/test/7/20260107/ggV4FxRq1nM6/245556549689585664.webp') no-repeat center top;
+			background-size: 100% auto;  /* 宽度100%，高度自适应 */
+			background-attachment: local;  /* 关键：让背景随内容滚动 */
+			background-repeat: repeat-y;   /* 垂直方向重复 */
+			padding: 25px;
+			color: #333;
+			min-height: 100vh;
+			overflow-x: hidden;
+			-webkit-font-smoothing: antialiased;
+			-webkit-overflow-scrolling: touch;
+			position: relative;
+		}
+
+		/* 确保html元素也占满高度 */
+		html {
+			height: 100%;
+		}
+
+		/* 添加半透明遮罩提高可读性 */
+		body::before {
+			content: '';
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(255, 255, 255, 0.3);
+			z-index: -1;
+		}
+        
+        .container {
+            max-width: 2200px; /* 增大最大宽度以适应10个卡片 */
+            margin: 0 auto;
+            transform: translateZ(0);
+            will-change: transform;
+            background-color: transparent;
+            backdrop-filter: none;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+        
+        header {
+			text-align: center;
+			margin-bottom: 30px;
+			padding: 25px;
+			
+			border-radius: 12px;
+			color: black;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+		}
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .search-section {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 35px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(3px);
+        }
+        
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .search-box {
+            flex: 1;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #3eede7;
+            box-shadow: 0 0 0 2px rgba(62, 237, 231, 0.2);
+        }
+        
+        .results-info {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr); /* 修改为10列 */
+            gap: 20px; /* 减小间隙以适应更多卡片 */
+            margin-top: 25px;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.9));
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            min-width: 180px;
+            border: 1px solid rgba(225, 232, 237, 0.5);
+            backdrop-filter: blur(3px);
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            border-color: rgba(184, 216, 255, 0.7);
+        }
+        
+        .card-image {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            border-bottom: 1px solid rgba(225, 232, 237, 0.5);
+            background-color: rgba(245, 249, 255, 0.7);
+        }
+        
+        .card-content {
+            padding: 18px;
+            text-align: center;
+        }
+        
+        .card-number {
+            font-weight: bold;
+            color: #3a5a78;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            text-align: center;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 25px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-image {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 12px;
+            box-shadow: 0 0 35px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(225, 232, 237, 0.5);
+        }
+        
+        .modal-info {
+            color: white;
+            text-align: center;
+            margin-top: 25px;
+            font-size: 1.25rem;
+        }
+        
+        .close {
+            position: absolute;
+            top: 25px;
+            right: 35px;
+            color: white;
+            font-size: 45px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+			z-index: 1002; /* 增加z-index确保按钮在最上层 */
+
+        }
+        
+        .close:hover {
+            color: #3eede7;
+			background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        
+        @media (max-width: 2200px) {
+            .card-grid {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+        
+        @media (max-width: 1600px) {
+            .card-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .card-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .card-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .search-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            h1 {
+                font-size: 2.25rem;
+            }
+            
+            .card-image {
+                height: 220px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .card-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .card-image {
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+		<h1>精卫-篇章1</h1>
+        </header>
+        <section class="search-section">
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="输入编号进行筛选">
+                </div>
+                <div class="results-info" id="resultsInfo">显示全部 100 个结果</div>
+            </div>
+        </section>
+        
+        <div class="card-grid" id="cardGrid"></div>
+    </div>
+    
+    <!-- 模态框用于显示大图 -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <div class="modal-content">
+            <img id="modalImage" class="modal-image" src="" alt="大图预览">
+            <div class="modal-info" id="modalInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        // 示例数据（包含封面图和全身图）
+        const jingweiData = [
+    {
+        "number": "16",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389237814120448.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396478768947200.png"
+    },
+    {
+        "number": "33",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389270001885184.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396517410394112.png"
+    },
+    {
+        "number": "65",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389324116795392.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396590974291968.png"
+    },
+    {
+        "number": "66",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389325911281664.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396593332166656.png"
+    },
+    {
+        "number": "70",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389332747997184.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396601771106304.png"
+    },
+    {
+        "number": "73",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251209/1JRUYOmVy9AeP/235149708733665280.png",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251209/1JRUYOmVy9AeP/235149658238439424.png"
+    },
+    {
+        "number": "129",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389434531848192.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396728039952384.png"
+    },
+    {
+        "number": "142",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389459302731776.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396806256009216.png"
+    },
+    {
+        "number": "164",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389496850817024.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396860064059392.png"
+    },
+    {
+        "number": "168",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389503947579392.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396869836787712.png"
+    },
+    {
+        "number": "170",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389507185582080.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396874039480320.png"
+    },
+    {
+        "number": "180",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389524461920256.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396895149412352.png"
+    },
+    {
+        "number": "209",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389573522018304.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396959834644480.png"
+    },
+    {
+        "number": "217",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389586654384128.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396978352496640.png"
+    },
+    {
+        "number": "242",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251209/1JRUYOmVy9AeP/235150352249626624.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251209/1JRUYOmVy9AeP/235150337691197440.png"
+    },
+    {
+        "number": "256",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389651901652992.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397100217323520.png"
+    },
+    {
+        "number": "275",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389682868199424.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397142059700224.png"
+    },
+    {
+        "number": "280",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389692040466432.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397154337103872.png"
+    },
+    {
+        "number": "294",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389717369868288.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397185999904768.png"
+    },
+    {
+        "number": "300",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389729445269504.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397199841107968.png"
+    },
+    {
+        "number": "310",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389747162009600.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397222641344512.png"
+    },
+    {
+        "number": "313",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389752351039488.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397228466556928.png"
+    },
+    {
+        "number": "348",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389813348126720.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397308117065728.png"
+    },
+    {
+        "number": "366",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389845627490304.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397346381701120.png"
+    },
+    {
+        "number": "447",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225389989836726272.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397521560326144.png"
+    },
+    {
+        "number": "544",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390156212183040.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397731002896384.png"
+    },
+    {
+        "number": "611",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390273157091328.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397881021243392.png"
+    },
+    {
+        "number": "625",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390294636797952.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397909445365760.png"
+    },
+    {
+        "number": "713",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390443324874752.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398099661246464.png"
+    },
+    {
+        "number": "736",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390484214468608.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398149934850048.png"
+    },
+    {
+        "number": "798",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390593832603648.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398283229831168.png"
+    },
+    {
+        "number": "828",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390643178590208.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398346614153216.png"
+    },
+    {
+        "number": "838",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390659641233408.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398369603133440.png"
+    },
+    {
+        "number": "895",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390758484201472.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398489191129088.png"
+    },
+    {
+        "number": "934",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225390826314485760.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398577300873216.png"
+    },
+    {
+        "number": "1108",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391121341829120.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398956926652416.png"
+    },
+    {
+        "number": "1112",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391128119824384.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398964853886976.png"
+    },
+    {
+        "number": "1145",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391188602363904.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399039173435392.png"
+    },
+    {
+        "number": "1176",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391244675338240.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399103203004416.png"
+    },
+    {
+        "number": "1232",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391347339317248.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399225332748288.png"
+    },
+    {
+        "number": "1427",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391682644561920.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399644503101440.png"
+    },
+    {
+        "number": "1462",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225391743278096384.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399718315139072.png"
+    },
+    {
+        "number": "1825",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225392376566992896.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400496362049536.png"
+    },
+    {
+        "number": "1938",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225392573351829504.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400739372310528.png"
+    },
+    {
+        "number": "1993",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225392666905104384.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400896561565696.png"
+    },
+    {
+        "number": "2022",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225392718046928896.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400958398865408.png"
+    },
+    {
+        "number": "2144",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225392928575823872.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401226607828992.png"
+    },
+    {
+        "number": "2313",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225393226903408640.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401608020381696.png"
+    },
+    {
+        "number": "2884",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225394221347721216.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400149447647232.png"
+    },
+    {
+        "number": "3005",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225394436218396672.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400459800301568.png"
+    },
+    {
+        "number": "3319",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395001723822080.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401224690356224.png"
+    },
+    {
+        "number": "3378",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395102877851648.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401376692609024.png"
+    },
+    {
+        "number": "3413",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395160657907712.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401461765001216.png"
+    },
+    {
+        "number": "3418",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395168560652288.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401476009533440.png"
+    },
+    {
+        "number": "3577",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395456930959360.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401860219686912.png"
+    },
+    {
+        "number": "3799",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225395887467876352.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402394511101952.png"
+    },
+    {
+        "number": "3957",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396188694401024.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404994841845760.png"
+    },
+    {
+        "number": "3977",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225396225214205952.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225405037787324416.png"
+    },
+    {
+        "number": "4036",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225397353922383872.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225405175615672320.png"
+    },
+    {
+        "number": "4441",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398051939131392.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225406030335811584.png"
+    },
+    {
+        "number": "4468",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398100185534464.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225406092058513408.png"
+    },
+    {
+        "number": "4619",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398360878981120.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398246302502912.png"
+    },
+    {
+        "number": "4669",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398443091533824.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398365617868800.png"
+    },
+    {
+        "number": "4700",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398494181675008.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398436661665792.png"
+    },
+    {
+        "number": "4775",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398623123644416.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398609877356544.png"
+    },
+    {
+        "number": "4802",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398664852099072.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398671584632832.png"
+    },
+    {
+        "number": "4803",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398666299809792.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225398673517531136.png"
+    },
+    {
+        "number": "5104",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399179107323904.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399312570753024.png"
+    },
+    {
+        "number": "5272",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399471957823488.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399679379415040.png"
+    },
+    {
+        "number": "5315",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399551021129728.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399767060664320.png"
+    },
+    {
+        "number": "5430",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399746579877888.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400003242598400.png"
+    },
+    {
+        "number": "5874",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400507942522880.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401171431759872.png"
+    },
+    {
+        "number": "5891",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400540671352832.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401212497514496.png"
+    },
+    {
+        "number": "6012",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404430958940160.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401539154104320.png"
+    },
+    {
+        "number": "6062",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404516505964544.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401669269803008.png"
+    },
+    {
+        "number": "6496",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225405269396115456.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403132612136960.png"
+    },
+    {
+        "number": "6531",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225405333527699456.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403283452567552.png"
+    },
+    {
+        "number": "6562",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225405387910369280.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403424682496000.png"
+    },
+    {
+        "number": "6649",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225405536422961152.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403698000797696.png"
+    },
+    {
+        "number": "6659",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251113/ghXAhXqPhd9d/225405554705932288.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403720201248768.png"
+    },
+    {
+        "number": "6663",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401875214999552.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403729135116288.png"
+    },
+    {
+        "number": "6664",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401877017874432.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403731214815232.png"
+    },
+    {
+        "number": "6674",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401895330205696.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403752052117504.png"
+    },
+    {
+        "number": "6685",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225401912850489344.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403775238905856.png"
+    },
+    {
+        "number": "6774",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402065077882880.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403971611348992.png"
+    },
+    {
+        "number": "6791",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402095407570944.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404006894510080.png"
+    },
+    {
+        "number": "6823",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402152907284480.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404078600331264.png"
+    },
+    {
+        "number": "6827",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402159920160768.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404088683438080.png"
+    },
+    {
+        "number": "6908",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402321542795264.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404265984380928.png"
+    },
+    {
+        "number": "6909",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402323674177536.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404267922825216.png"
+    },
+    {
+        "number": "6923",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402353852194816.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404299581431808.png"
+    },
+    {
+        "number": "6981",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402465198383104.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225404428111683584.png"
+    },
+    {
+        "number": "7047",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402596090028032.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399105484705792.png"
+    },
+    {
+        "number": "7048",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402597918068736.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399107288932352.png"
+    },
+    {
+        "number": "7052",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402606013075456.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399115463630848.png"
+    },
+    {
+        "number": "7140",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402756387262464.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399306799390720.png"
+    },
+    {
+        "number": "7274",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225402991209566208.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399676862832640.png"
+    },
+    {
+        "number": "7309",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403055647334400.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399753747943424.png"
+    },
+    {
+        "number": "7329",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403093706448896.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225399795661623296.png"
+    },
+    {
+        "number": "7499",
+        "coverImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225403401476087808.jpg",
+        "fullImage": "https://img.shuziwenbo.cn/8/20251112/ghXAhXqPhd9d/225400153276370944.png"
+    }
+];
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCards(jingweiData);
+            
+            // 搜索功能
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', filterCards);
+            
+            // 模态框关闭功能
+            const modal = document.getElementById('imageModal');
+            const closeBtn = document.querySelector('.close');
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
+        // 渲染卡片
+        function renderCards(data) {
+            const cardGrid = document.getElementById('cardGrid');
+            cardGrid.innerHTML = '';
+            
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img class="card-image" src="${item.coverImage}" alt="精卫 ${item.number}">
+                    <div class="card-content">
+                        <div class="card-number">编号: ${item.number}</div>
+                    </div>
+                `;
+                
+                // 修改卡片点击事件
+				card.addEventListener('click', function() {
+					// 添加加载状态
+					const originalContent = card.innerHTML;
+					card.innerHTML = `
+						<div style="display:flex;align-items:center;justify-content:center;height:240px;">
+							<div>加载中...</div>
+						</div>
+					`;
+					
+					// 延迟执行以确保UI更新
+					setTimeout(() => {
+						showModal(item.number, item.fullImage);
+						// 恢复原始内容
+						card.innerHTML = originalContent;
+					}, 100);
+				});
+                
+                cardGrid.appendChild(card);
+            });
+            
+            // 更新结果信息
+            document.getElementById('resultsInfo').textContent = `共 ${data.length} 个结果`;
+        }
+
+        // 筛选卡片
+        function filterCards() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filteredData = jingweiData.filter(item => 
+                item.number.toLowerCase().includes(searchTerm)
+            );
+            renderCards(filteredData);
+        }
+
+        // 显示模态框
+        function showModal(number, imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            modalImage.src = imageUrl;
+            modalImage.alt = `精卫 ${number} 大图`;
+            modalInfo.textContent = `精卫编号: ${number}`;
+            modal.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
